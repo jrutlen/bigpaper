@@ -3,11 +3,11 @@ substitutions:
   friendly_name: Garage ePaper
   hide_main_header_on_single_list: "true"
 
-  list_1_title: "Returns"
-  list_1_entity: "sensor.todo_returns_formatted"
+  list_1_title: "Errands"
+  list_1_entity: "sensor.todo_errands_formatted"
 
-  list_2_title: "Errands"
-  list_2_entity: "sensor.todo_errands_formatted"
+  list_2_title: "Returns"
+  list_2_entity: "sensor.todo_returns_formatted"
 
   ha_page_select_entity: "input_select.upstairs_epaper_page"
 
@@ -43,6 +43,12 @@ api:
   on_client_connected:
     - logger.log: "*** Connected to HA. Synchronizing page & states... ***"
     - delay: 3s
+    - lvgl.label.update:
+        id: todo_list_1_label
+        text: !lambda "return id(todo_list_1_text);"
+    - lvgl.label.update:
+        id: todo_list_2_label
+        text: !lambda "return id(todo_list_2_text);"
     - component.update: mini_paper_display
     - script.execute: reset_sleep_timer
 
@@ -215,7 +221,7 @@ lvgl:
                         x: 0
                         y: 0
                         width: 100%
-                        height: 30
+                        height: 40
                         pad_all: 0
                         border_width: 0
                         bg_color: 0x000000
@@ -224,20 +230,20 @@ lvgl:
                           - label:
                               text: "${list_2_title}"
                               text_color: 0xFFFFFF
-                              text_font: font_title_small
+                              text_font: font_title_medium
                               align: CENTER
 
                     - label:
+                        id: todo_list_2_label
                         x: 8
-                        y: 34
+                        y: 44
                         width: 248
-                        height: 96
+                        height: 332
                         text_color: 0x000000
-                        text_font: font_medium
-                        long_mode: CLIP
+                        text_font: font_large
+                        long_mode: WRAP
                         align: TOP_LEFT
-                        text: !lambda |-
-                          return id(todo_list_2_text);
+                        text: "..."
 
               - obj:
                   id: returns_column
@@ -255,7 +261,7 @@ lvgl:
                         x: 0
                         y: 0
                         width: 100%
-                        height: 30
+                        height: 40
                         pad_all: 0
                         border_width: 0
                         bg_color: 0x000000
@@ -264,20 +270,20 @@ lvgl:
                           - label:
                               text: "${list_1_title}"
                               text_color: 0xFFFFFF
-                              text_font: font_title_small
+                              text_font: font_title_medium
                               align: CENTER
 
                     - label:
+                        id: todo_list_1_label
                         x: 8
-                        y: 34
+                        y: 44
                         width: 248
-                        height: 96
+                        height: 332
                         text_color: 0x000000
-                        text_font: font_medium
+                        text_font: font_large
                         long_mode: WRAP
                         align: TOP_LEFT
-                        text: !lambda |-
-                          return id(todo_list_1_text);
+                        text: "..."
 
 time:
   - platform: sntp
@@ -304,9 +310,9 @@ font:
     size: 16
     glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~°•'
 
-  - file: "gfonts://Roboto"
+  - file: "gfonts://Merriweather"
     id: font_large
-    size: 20
+    size: 32
     glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~°•'
 
   - file: "gfonts://Roboto"
@@ -314,14 +320,14 @@ font:
     size: 24
     glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
 
-  - file: "gfonts://Roboto"
+  - file: "gfonts://Merriweather"
     id: font_title_medium
-    size: 32
+    size: 36
     glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
 
-  - file: "gfonts://Roboto"
+  - file: "gfonts://Merriweather"
     id: font_title_large
-    size: 40
+    size: 50
     glyphs: ' !"#$%&''()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
 
   - file: "gfonts://Material Symbols Outlined"
@@ -368,7 +374,10 @@ text_sensor:
             format: "todo_list_1_src state: [%s]"
             args: [ 'id(todo_list_1_src).state.c_str()' ]
         - lambda: |-
-            id(todo_list_1_text) = id(todo_list_1_src).state;
+            id(todo_list_1_text) = x.empty() ? std::string("Nothing to do") : x;
+        - lvgl.label.update:
+            id: todo_list_1_label
+            text: !lambda "return id(todo_list_1_text);"
         - delay: 200ms
         - component.update: mini_paper_display
 
@@ -381,23 +390,12 @@ text_sensor:
             format: "todo_list_2_src state: [%s]"
             args: [ 'id(todo_list_2_src).state.c_str()' ]
         - lambda: |-
-            id(todo_list_2_text) = id(todo_list_2_src).state;
+            id(todo_list_2_text) = x.empty() ? std::string("Nothing to do") : x;
+        - lvgl.label.update:
+            id: todo_list_2_label
+            text: !lambda "return id(todo_list_2_text);"
         - delay: 200ms
         - component.update: mini_paper_display
-
-  - platform: template
-    id: todo_list_1_display
-    internal: true
-    update_interval: never
-    lambda: |-
-      return id(todo_list_1_src).state;
-
-  - platform: template
-    id: todo_list_2_display
-    internal: true
-    update_interval: never
-    lambda: |-
-      return id(todo_list_2_src).state;
 
 select:
   - platform: template
